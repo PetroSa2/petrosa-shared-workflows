@@ -308,3 +308,50 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             COMMIT_SHA=${{ github.sha }}
+
+  # =============================================================================
+  # Stage 5: PIPELINE STATUS - Aggregates all stages
+  # =============================================================================
+  pipeline:
+    name: Pipeline
+    runs-on: petrosa-org-runners
+    needs: [lint, test, security-scan, build-and-push]
+    if: always()
+
+    steps:
+      - name: Validate upstream job results
+        run: |
+          echo "lint=${{ needs.lint.result }}"
+          echo "test=${{ needs.test.result }}"
+          echo "security-scan=${{ needs.security-scan.result }}"
+          echo "build-and-push=${{ needs.build-and-push.result }}"
+
+          # Check if critical jobs passed
+          FAILED=0
+
+          if [[ "${{ needs.lint.result }}" != "success" ]] && [[ "${{ needs.lint.result }}" != "skipped" ]]; then
+            echo "❌ Lint failed or was cancelled"
+            FAILED=1
+          fi
+
+          if [[ "${{ needs.test.result }}" != "success" ]] && [[ "${{ needs.test.result }}" != "skipped" ]]; then
+            echo "❌ Test failed or was cancelled"
+            FAILED=1
+          fi
+
+          if [[ "${{ needs.security-scan.result }}" != "success" ]] && [[ "${{ needs.security-scan.result }}" != "skipped" ]]; then
+            echo "❌ Security scan failed or was cancelled"
+            FAILED=1
+          fi
+
+          # build-and-push is optional (can be skipped)
+          if [[ "${{ needs.build-and-push.result }}" == "failure" ]]; then
+            echo "❌ Docker build failed"
+            FAILED=1
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✅ All required checks passed"
