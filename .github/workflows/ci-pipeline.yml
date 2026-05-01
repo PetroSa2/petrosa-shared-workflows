@@ -55,16 +55,6 @@ on:
       codecov-token:
         required: false
 
-    outputs:
-      version:
-        description: 'Version of the built Docker image'
-        value: ${{ jobs.build-and-push.outputs.version }}
-      image-url:
-        description: 'Full image URL with tag'
-        value: ${{ jobs.build-and-push.outputs.image-url }}
-      digest:
-        description: 'Image digest'
-        value: ${{ jobs.build-and-push.outputs.digest }}
 
 
 jobs:
