@@ -41,11 +41,67 @@ on:
         required: false
 
 jobs:
-  debug:
-    name: Debug
+  # =============================================================================
+  # Stage 1: LINT - Fail early if linting fails
+  # =============================================================================
+  lint:
+    name: Lint
     runs-on: petrosa-org-runners
+    if: inputs.skip-lint != true
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+
     steps:
-      - name: Echo inputs
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+
+      - name: Cache virtual environment
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
+
+      - name: Install dependencies
+        shell: bash
         run: |
-          echo "Service: ${{ inputs.service-name }}"
-          echo "Image: ${{ inputs.image-name }}"
+          python -m pip install --upgrade pip
+          python -m venv .venv || echo "Virtual environment already exists"
+          source .venv/bin/activate
+          pip install ruff==0.3.4 mypy==1.9.0 black==24.3.0
+
+      - name: Run Ruff
+        shell: bash
+        run: |
+          source .venv/bin/activate
+          ruff check .
+
+      - name: Run Mypy
+        shell: bash
+        continue-on-error: true
+        run: |
+          source .venv/bin/activate
+          mypy . || {
+            echo "⚠️ Mypy found issues but continuing (non-blocking)"
+            exit 0
+          }
+
+      - name: Check formatting with Black
+        shell: bash
+        run: |
+          source .venv/bin/activate
+          black --check . || {
+            echo "⚠️ Black found formatting issues (non-blocking)"
+          }
+
+      - id: result
+        shell: bash
+        run: |
+          echo "passed=true" >> $GITHUB_OUTPUT
