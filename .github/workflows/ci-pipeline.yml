@@ -230,7 +230,7 @@ jobs:
           }
 
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
           scan-type: 'fs'
