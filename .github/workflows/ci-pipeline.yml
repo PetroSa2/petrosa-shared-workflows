@@ -163,6 +163,7 @@ jobs:
           source .venv/bin/activate
           pip install -r requirements.txt
           pip install -r requirements-dev.txt || true
+          pip install -e . || true
 
       - name: Install pre-commit
         shell: bash
