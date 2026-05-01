@@ -130,12 +130,10 @@ jobs:
       MONGODB_URL: "mongodb://testuser:testpass@localhost:27017/testdb" # gitleaks:allow
       MONGODB_URI: "mongodb://testuser:testpass@localhost:27017/testdb" # gitleaks:allow
       NATS_SERVERS: "nats://localhost:4222"
-      NATS_ENABLED: "false"
       JWT_SECRET_KEY: "test-jwt-secret-key-for-testing-only"
       BINANCE_TESTNET: "true"
       SIMULATION_ENABLED: "true"
       ENVIRONMENT: "test"
-      LOG_LEVEL: "DEBUG"
 
     steps:
       - name: Checkout code
