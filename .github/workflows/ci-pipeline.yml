@@ -133,7 +133,7 @@ jobs:
       JWT_SECRET_KEY: "test-jwt-secret-key-for-testing-only"
       BINANCE_TESTNET: "true"
       SIMULATION_ENABLED: "true"
-      ENVIRONMENT: "test"
+      ENVIRONMENT: "testing"
 
     steps:
       - name: Checkout code
