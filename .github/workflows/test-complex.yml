@@ -1,0 +1,53 @@
+name: 'Complex Test Reusable'
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        type: string
+        required: true
+      skip-lint:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      test-secret:
+        required: false
+    outputs:
+      result:
+        description: 'Test result'
+        value: ${{ jobs.summary.outputs.result }}
+
+jobs:
+  lint:
+    name: Lint Test
+    runs-on: petrosa-org-runners
+    if: inputs.skip-lint != true
+    outputs:
+      passed: ${{ steps.check.outputs.passed }}
+    steps:
+      - id: check
+        run: |
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+          echo "Running lint for ${{ inputs.service-name }}"
+
+  test:
+    name: Test Job
+    runs-on: petrosa-org-runners
+    needs: lint
+    if: ${{ needs.lint.result == 'success' || needs.lint.result == 'skipped' }}
+    steps:
+      - run: echo "Running tests for ${{ inputs.service-name }}"
+
+  summary:
+    name: Summary
+    runs-on: petrosa-org-runners
+    needs: [lint, test]
+    if: always()
+    outputs:
+      result: ${{ steps.out.outputs.result }}
+    steps:
+      - id: out
+        run: |
+          echo "result=passed" >> "$GITHUB_OUTPUT"
+          echo "lint=${{ needs.lint.result }}"
+          echo "test=${{ needs.test.result }}"
