@@ -182,7 +182,7 @@ jobs:
         shell: bash
         run: |
           source .venv/bin/activate
-          pytest --cov=. --cov-report=xml --cov-report=term-missing
+          pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-threshold }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
