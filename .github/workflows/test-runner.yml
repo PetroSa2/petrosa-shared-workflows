@@ -1,0 +1,16 @@
+name: 'Test With Custom Runner'
+on:
+  workflow_call:
+    inputs:
+      message:
+        type: string
+        required: false
+        default: 'hello'
+
+jobs:
+  test:
+    name: Test With Petrosa Runner
+    runs-on: petrosa-org-runners
+    steps:
+      - name: Print message
+        run: echo "${{ inputs.message }}"
