@@ -181,3 +181,60 @@ jobs:
           file: ./coverage.xml
           flags: unittests
           fail_ci_if_error: false
+
+  # =============================================================================
+  # Stage 3: SECURITY SCAN - Only runs if test passes (fail early!)
+  # =============================================================================
+  security-scan:
+    name: Security Scan
+    runs-on: petrosa-org-runners
+    needs: test
+    if: ${{ inputs.skip-security != true && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        shell: bash
+        run: |
+          GITLEAKS_VERSION="8.18.4"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks detect --source . --no-git || echo "⚠️ Gitleaks found issues but continuing"
+        continue-on-error: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Run Bandit
+        shell: bash
+        continue-on-error: true
+        run: |
+          pip install bandit[toml]
+          bandit -r . -x ./venv,./.venv -v || {
+            echo "⚠️ Bandit found issues but continuing (non-blocking)"
+            exit 0
+          }
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        continue-on-error: true
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
+        with:
+          sarif_file: 'trivy-results.sarif'
