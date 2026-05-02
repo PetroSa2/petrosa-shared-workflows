@@ -32,6 +32,10 @@ on:
         type: boolean
         required: false
         default: false
+      pytest-extra-args:
+        type: string
+        required: false
+        default: ''
     secrets:
       dockerhub-username:
         required: false
@@ -182,7 +186,7 @@ jobs:
         shell: bash
         run: |
           source .venv/bin/activate
-          pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-threshold }}
+          pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-threshold }} ${{ inputs.pytest-extra-args }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
