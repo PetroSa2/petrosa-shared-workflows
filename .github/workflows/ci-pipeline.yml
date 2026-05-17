@@ -15,7 +15,7 @@ on:
       coverage-threshold:
         type: string
         required: false
-        default: '40'
+        default: '75'
       skip-lint:
         type: boolean
         required: false
