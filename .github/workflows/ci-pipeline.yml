@@ -41,7 +41,7 @@ on:
         required: false
       dockerhub-token:
         required: false
-      codecov-token:
+      CODECOV_TOKEN:
         required: false
 
     outputs:
@@ -191,7 +191,8 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.codecov-token }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           file: ./coverage.xml
           flags: unittests
           fail_ci_if_error: false
