@@ -176,25 +176,30 @@ jobs:
                 per_page: 100,
               });
 
-              // Accept any non-dismissed Copilot review on this PR EXCEPT the
-              // self-error template (FM-6 in the merge-gate failure-mode taxonomy):
-              // those are non-reviews and must not count toward the gate. Thread
-              // resolution is the real quality gate — if all Copilot threads are
-              // resolved, the code is approved. requestReviewers is a no-op for
-              // Copilot once it has reviewed, so a self-error review left in place
-              // would otherwise false-pass the gate forever on that PR.
-              let sawSelfError = false;
+              // Classify reviews. Three buckets matter to the gate:
+              //   1) a real Copilot review (state in {APPROVED, CHANGES_REQUESTED, COMMENTED-non-self-error})
+              //      → gate passes via the normal happy path.
+              //   2) a Copilot self-error review ON THE CURRENT HEAD SHA
+              //      → gate passes with a self-error annotation (don't block on Copilot
+              //        infrastructure failure — the operator didn't cause it). Freshness
+              //        matters: a self-error from a previous commit must NOT bypass the
+              //        gate for a subsequent commit.
+              //   3) nothing yet → keep waiting, then time-fail.
+              // Without bucket (2) the gate hangs every PR whenever Copilot's backend
+              // crashes; org-wide outages would block all merges. With bucket (2) the
+              // failure mode is loud (warning + annotated SUCCESS) but non-blocking.
+              let sawSelfErrorOnHead = false;
               let found = false;
               for (const r of reviews) {
                 if (!r.user || !isCopilotPrReviewer(r.user.login)) continue;
                 if (r.state === 'DISMISSED' || r.state === 'PENDING') continue;
                 if (isCopilotSelfErrorReview(r)) {
-                  sawSelfError = true;
+                  if (r.commit_id === headSha) sawSelfErrorOnHead = true;
                   continue;
                 }
                 found = true;
               }
-              return { found, sawSelfError };
+              return { found, sawSelfErrorOnHead };
             }
 
             // Copilot reviews are asynchronous and often land after CI completes and after the
@@ -211,6 +216,25 @@ jobs:
                 break;
               }
 
+              if (review.sawSelfErrorOnHead) {
+                // FM-6 (petrosa_k8s#767): Copilot reviewed the current head but its
+                // backend errored. That is a Copilot-infrastructure failure, not a
+                // PR-quality signal — passing the gate (with a loud annotation) is
+                // strictly better than blocking every merge during a Copilot outage.
+                // The annotated SUCCESS distinguishes this from a "real review approved"
+                // pass, and the workflow log carries a warning. Operators who want a
+                // real review before merge can re-request Copilot and re-run the gate.
+                const passMsg = `Copilot review gate passed with self-error annotation ` +
+                  `(FM-6, petrosa_k8s#767): Copilot submitted a self-error review on ${headSha} ` +
+                  `("Copilot encountered an error and was unable to review this pull request"). ` +
+                  `The gate does not block on Copilot infrastructure failures. ` +
+                  `If a real Copilot review is desired before merge, re-request Copilot review ` +
+                  `(GitHub UI → Reviewers → Re-request) and re-run this workflow.`;
+                core.warning(passMsg);
+                await finalizeCheck('success', passMsg);
+                return;
+              }
+
               if (waited === 0) {
                 core.info(
                   `Waiting for Copilot PR review on current head ${headSha} (polling up to ${maxWaitSeconds}s).`
@@ -218,12 +242,8 @@ jobs:
               }
 
               if (waited >= maxWaitSeconds) {
-                let msg = `No submitted Copilot PR review for current head ${headSha} after waiting ${maxWaitSeconds}s. ` +
+                const msg = `No submitted Copilot PR review for current head ${headSha} after waiting ${maxWaitSeconds}s. ` +
                   `Copilot may be delayed; re-request Copilot review and retry once it submits a review on the latest commit.`;
-                if (review.sawSelfError) {
-                  msg += ' Copilot submitted a self-error review (FM-6, petrosa_k8s#767): ' +
-                    'self-error reviews do not count toward the gate. Re-request Copilot review so it can retry.';
-                }
                 await finalizeCheck('failure', msg);
                 core.setFailed(msg);
                 return;
