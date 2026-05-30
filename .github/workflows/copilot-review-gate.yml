@@ -158,6 +158,16 @@ jobs:
               );
             };
 
+            // FM-6 (petrosa_k8s#767): Copilot's self-error template is a state=COMMENTED
+            // review whose body begins with this exact phrase. The phrase is byte-for-byte
+            // invariant across the 50+ org-wide PRs that hit this failure mode.
+            const COPILOT_SELF_ERROR_PREFIX = 'Copilot encountered an error and was unable to review this pull request';
+            const isCopilotSelfErrorReview = (review) => {
+              if (!review || review.state !== 'COMMENTED') return false;
+              const body = review.body || '';
+              return body.startsWith(COPILOT_SELF_ERROR_PREFIX);
+            };
+
             async function hasCopilotReview() {
               const reviews = await github.paginate(github.rest.pulls.listReviews, {
                 owner,
@@ -166,17 +176,25 @@ jobs:
                 per_page: 100,
               });
 
-              // Accept any non-dismissed Copilot review on this PR. Copilot cannot
-              // re-review after already reviewing (requestReviewers is a no-op for
-              // Copilot once it has reviewed). Thread resolution is the real quality
-              // gate — if all Copilot threads are resolved, the code is approved.
-              return reviews.some(
-                (r) =>
-                  r.user &&
-                  isCopilotPrReviewer(r.user.login) &&
-                  r.state !== 'DISMISSED' &&
-                  r.state !== 'PENDING'
-              );
+              // Accept any non-dismissed Copilot review on this PR EXCEPT the
+              // self-error template (FM-6 in the merge-gate failure-mode taxonomy):
+              // those are non-reviews and must not count toward the gate. Thread
+              // resolution is the real quality gate — if all Copilot threads are
+              // resolved, the code is approved. requestReviewers is a no-op for
+              // Copilot once it has reviewed, so a self-error review left in place
+              // would otherwise false-pass the gate forever on that PR.
+              let sawSelfError = false;
+              let found = false;
+              for (const r of reviews) {
+                if (!r.user || !isCopilotPrReviewer(r.user.login)) continue;
+                if (r.state === 'DISMISSED' || r.state === 'PENDING') continue;
+                if (isCopilotSelfErrorReview(r)) {
+                  sawSelfError = true;
+                  continue;
+                }
+                found = true;
+              }
+              return { found, sawSelfError };
             }
 
             // Copilot reviews are asynchronous and often land after CI completes and after the
@@ -187,7 +205,8 @@ jobs:
             let waited = 0;
 
             while (waited <= maxWaitSeconds) {
-              if (await hasCopilotReview()) {
+              const review = await hasCopilotReview();
+              if (review.found) {
                 core.info(`Found submitted Copilot review for PR #${pull_number} @ ${headSha}.`);
                 break;
               }
@@ -199,8 +218,12 @@ jobs:
               }
 
               if (waited >= maxWaitSeconds) {
-                const msg = `No submitted Copilot PR review for current head ${headSha} after waiting ${maxWaitSeconds}s. ` +
+                let msg = `No submitted Copilot PR review for current head ${headSha} after waiting ${maxWaitSeconds}s. ` +
                   `Copilot may be delayed; re-request Copilot review and retry once it submits a review on the latest commit.`;
+                if (review.sawSelfError) {
+                  msg += ' Copilot submitted a self-error review (FM-6, petrosa_k8s#767): ' +
+                    'self-error reviews do not count toward the gate. Re-request Copilot review so it can retry.';
+                }
                 await finalizeCheck('failure', msg);
                 core.setFailed(msg);
                 return;
