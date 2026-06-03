@@ -60,6 +60,9 @@ jobs:
     steps:
       - name: Verify Copilot review and resolved threads
         uses: actions/github-script@v7
+        env:
+          # Kill-switch: COPILOT_REVIEW_ENABLED passed via env so the script can read it.
+          COPILOT_REVIEW_ENABLED: ${{ vars.COPILOT_REVIEW_ENABLED }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -154,6 +157,21 @@ jobs:
               } catch (err) {
                 core.warning(`Could not finalize check_run: ${err.message}`);
               }
+            }
+
+            // Kill-switch short-circuit (PetroSa2/petrosa_k8s#793): when
+            // COPILOT_REVIEW_ENABLED is absent/empty/false (not exactly 'true'),
+            // immediately finalize the copilot-review check as 'success' and
+            // return — no polling loop, no review request, no 10-minute wait.
+            // This keeps the required check GREEN so PRs are never blocked.
+            // The job MUST run (never skip at job level) so the check_run posts.
+            const killSwitch = (process.env.COPILOT_REVIEW_ENABLED || '').trim();
+            if (killSwitch !== 'true') {
+              const msg = 'Copilot review disabled org-wide via COPILOT_REVIEW_ENABLED kill-switch ' +
+                '(Copilot billing/quota exhausted). Gate auto-passes; no review requested.';
+              core.info(msg);
+              await finalizeCheck('success', msg);
+              return;
             }
 
             const isCopilotPrReviewer = (login) => {
