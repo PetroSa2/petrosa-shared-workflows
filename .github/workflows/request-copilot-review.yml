@@ -26,8 +26,15 @@ on:
         required: false
         default: ''
 
+# Kill-switch: COPILOT_REVIEW_ENABLED org variable (default false).
+# When absent/empty/false, the request job is SKIPPED — no review requested.
+# When exactly 'true', the job runs normally.
+# Enabled iff vars.COPILOT_REVIEW_ENABLED == 'true'; anything else => disabled (safe default).
+# See PetroSa2/petrosa_k8s#793, docs/COPILOT_REVIEW_ENFORCEMENT.md.
+
 jobs:
   request-copilot-review:
+    if: vars.COPILOT_REVIEW_ENABLED == 'true'
     runs-on: petrosa-org-runners
     permissions:
       pull-requests: write
