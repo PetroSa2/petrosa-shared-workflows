@@ -13,9 +13,12 @@ on:
         required: false
         default: '3.11'
       coverage-threshold:
+        # 40 is the #976 canonical CI-enforced coverage floor. Callers should
+        # not silently drop below it; pass a higher explicit value to opt into
+        # stricter enforcement. See PetroSa2/petrosa_k8s#976 Decision 2.
         type: string
         required: false
-        default: '75'
+        default: '40'
       skip-lint:
         type: boolean
         required: false
