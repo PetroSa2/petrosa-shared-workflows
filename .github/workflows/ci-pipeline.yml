@@ -93,7 +93,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m venv .venv || echo "Virtual environment already exists"
           source .venv/bin/activate
-          pip install ruff==0.3.4 mypy==1.9.0 black==24.3.0
+          pip install ruff==0.9.9 mypy==1.15.0
 
       - name: Run Ruff
         shell: bash
@@ -109,14 +109,6 @@ jobs:
           mypy . || {
             echo "⚠️ Mypy found issues but continuing (non-blocking)"
             exit 0
-          }
-
-      - name: Check formatting with Black
-        shell: bash
-        run: |
-          source .venv/bin/activate
-          black --check . || {
-            echo "⚠️ Black found formatting issues (non-blocking)"
           }
 
       - id: result
