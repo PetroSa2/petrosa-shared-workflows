@@ -1,0 +1,38 @@
+name: Validate Workflows
+
+# Self-validation for petrosa-shared-workflows. Its ci-pipeline.yml is
+# workflow_call-only and every service repo inherits it via
+# `uses: PetroSa2/petrosa-shared-workflows/.github/workflows/ci-pipeline.yml@<ref>`,
+# yet this repo had no branch protection and no status check of its own
+# (PetroSa2/petrosa_k8s#1053, Finding 0). This provides a required check so
+# branch protection on main can gate merges.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Lint reusable workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: yamllint
+        run: |
+          python3 -m pip install --quiet yamllint
+          yamllint \
+            -d '{extends: default, rules: {line-length: disable, document-start: disable, truthy: {check-keys: false}, comments: {min-spaces-from-content: 1}}}' \
+            .github/workflows/
+
+      - name: actionlint
+        run: |
+          # Pinned download script (tag, not @main) to avoid a mutable supply-chain ref.
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color
