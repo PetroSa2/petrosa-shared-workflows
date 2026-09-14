@@ -1,0 +1,6 @@
+self-hosted-runner:
+  # petrosa-org-runners is the org's ARC self-hosted pool (see petrosa_k8s
+  # AGENTS.md → Runner policy). Declare it so actionlint does not flag it as
+  # an unknown runner label.
+  labels:
+    - petrosa-org-runners
