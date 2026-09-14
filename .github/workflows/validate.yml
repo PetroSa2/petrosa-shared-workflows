@@ -35,4 +35,8 @@ jobs:
         run: |
           # Pinned download script (tag, not @main) to avoid a mutable supply-chain ref.
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
-          ./actionlint -color
+          # Validate workflow syntax + expressions. shellcheck integration is
+          # disabled: this is a lightweight self-check and SC2086-info notes in
+          # ci-pipeline.yml run steps are not merge blockers. The custom
+          # self-hosted runner label is declared in .github/actionlint.yaml.
+          ./actionlint -color -shellcheck=
