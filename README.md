@@ -29,4 +29,13 @@ jobs:
 - `coverage-threshold` (optional, default: `40`): Min coverage %
 - `skip-lint`, `skip-test`, `skip-security`, `skip-docker-build` (optional booleans)
 
+## Job timeouts
+
+Every job in `ci-pipeline.yml` and `validate.yml` has an explicit
+`timeout-minutes` (defensive; see [PetroSa2/petrosa_k8s#1064](https://github.com/PetroSa2/petrosa_k8s/issues/1064)).
+A hung step now self-terminates instead of pinning a scarce
+`petrosa-org-runners` slot for the 6h job default. See
+[`docs/runbooks/hung-runner-mitigation.md`](./docs/runbooks/hung-runner-mitigation.md)
+for the log signature, root-cause investigation, and manual mitigation.
+
 
