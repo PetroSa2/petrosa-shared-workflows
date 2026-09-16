@@ -20,6 +20,10 @@ jobs:
   validate:
     name: Lint reusable workflows
     runs-on: ubuntu-latest
+    # Defensive timeout (#1064): this is a self-check on ubuntu-latest, not
+    # part of the reusable ARC-affected pipeline, but every job in this repo
+    # gets an explicit bound per the same AC.
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
