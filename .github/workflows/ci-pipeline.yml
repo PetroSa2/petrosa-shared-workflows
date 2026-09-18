@@ -197,7 +197,7 @@ jobs:
           pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-threshold }} ${{ inputs.pytest-extra-args }}
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
