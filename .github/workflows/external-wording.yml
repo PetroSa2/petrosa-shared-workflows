@@ -1,0 +1,50 @@
+name: 'Reusable External Wording Check'
+
+# Fails a pull request whose title, body, commit messages or added lines contain a term listed in the
+# organisation Actions variable EXTERNAL_WORDING_TERMS. The terms live only in that variable, so they never appear in
+# public code or logs. An empty variable makes the check print a notice and pass.
+#
+# Usage in a service repo:
+#   jobs:
+#     wording:
+#       uses: PetroSa2/petrosa-shared-workflows/.github/workflows/external-wording.yml@<sha>
+
+on:
+  workflow_call:
+    inputs:
+      shared-ref:
+        description: 'Ref of petrosa-shared-workflows to take the check script from'
+        type: string
+        required: false
+        default: 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  wording:
+    name: External wording
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the repository with history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout the shared checks
+        uses: actions/checkout@v4
+        with:
+          repository: PetroSa2/petrosa-shared-workflows
+          ref: ${{ inputs.shared-ref }}
+          path: .shared-checks
+
+      - name: Check title, body, commits and added lines
+        env:
+          EXTERNAL_WORDING_TERMS: ${{ vars.EXTERNAL_WORDING_TERMS }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 .shared-checks/scripts/check_external_wording_pr.py

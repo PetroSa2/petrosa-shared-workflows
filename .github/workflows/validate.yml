@@ -44,3 +44,21 @@ jobs:
           # ci-pipeline.yml run steps are not merge blockers. The custom
           # self-hosted runner label is declared in .github/actionlint.yaml.
           ./actionlint -color -shellcheck=
+
+  test:
+    name: Test the check scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: pytest
+        run: |
+          python3 -m pip install --quiet pytest
+          python3 -m pytest tests -q
