@@ -8,8 +8,8 @@ Rules
   3. No other vendor instruction files: `.cursorrules`, `.cursor/`, `.windsurfrules`, `.clinerules`, `.aider*`,
      `.continue/`, `.github/prompts/`, `.gemini/`.
   4. Accuracy: every `make <target>` written in backticks in `AGENTS.md` exists in the Makefile, and every relative
-     path written in backticks exists in the repository (URLs, absolute and home paths, placeholders and globs are
-     skipped).
+     path written in backticks exists in the repository (URLs, absolute and home paths, placeholders, globs, `owner/repo` slugs and
+     action references are skipped).
 
 Usage: check_agent_instructions.py [REPO_DIR]        Exit codes: 0 clean, 1 violations, 2 not a repository.
 """
@@ -62,9 +62,13 @@ def makefile_targets(repo: Path) -> set[str]:
     )
 
 
+# `owner/repo` slugs and action references name other repositories, not files in this one.
+EXTERNAL_PREFIXES = ("PetroSa2/", "actions/", "docker/", "astral-sh/", "OWNER/")
+
+
 def looks_like_path(token: str) -> bool:
-    if any(c in token for c in "<>{}*$|= ") or token.startswith(
-        ("http", "/", "~", "-", "@", "#", "..")
+    if any(c in token for c in "<>{}*$|=: ") or token.startswith(
+        ("http", "/", "~", "-", "@", "#", "..") + EXTERNAL_PREFIXES
     ):
         return False
     token = token.split("#", 1)[0].rstrip(".,;:)")

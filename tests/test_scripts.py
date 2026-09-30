@@ -105,6 +105,18 @@ def test_a_path_that_does_not_exist_is_reported_but_urls_and_placeholders_are_no
     ]
 
 
+def test_other_repository_references_are_not_treated_as_missing_files(
+    tmp_path: Path,
+) -> None:
+    base(tmp_path)
+    (tmp_path / "AGENTS.md").write_text(
+        GOOD
+        + "See `PetroSa2/petrosa`, `actions/checkout`, `OWNER/REPO` and `owner:docs/x.md`.\n",
+        encoding="utf-8",
+    )
+    assert agents.check(tmp_path) == []
+
+
 def test_oversized_agents_file_fails(tmp_path: Path) -> None:
     base(tmp_path)
     (tmp_path / "AGENTS.md").write_text("x" * (33 * 1024), encoding="utf-8")
