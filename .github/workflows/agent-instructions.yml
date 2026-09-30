@@ -1,0 +1,40 @@
+name: 'Reusable Agent Instructions Check'
+
+# Fails a pull request when the repository has no AGENTS.md, keeps vendor-specific instruction files, has pointer
+# files that are not pointers, or AGENTS.md names a make target or path that does not exist.
+#
+# Usage in a service repo:
+#   jobs:
+#     instructions:
+#       uses: PetroSa2/petrosa-shared-workflows/.github/workflows/agent-instructions.yml@<sha>
+
+on:
+  workflow_call:
+    inputs:
+      shared-ref:
+        description: 'Ref of petrosa-shared-workflows to take the check script from'
+        type: string
+        required: false
+        default: 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  instructions:
+    name: Agent instructions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Checkout the shared checks
+        uses: actions/checkout@v4
+        with:
+          repository: PetroSa2/petrosa-shared-workflows
+          ref: ${{ inputs.shared-ref }}
+          path: .shared-checks
+
+      - name: Check the instruction files
+        run: python3 .shared-checks/scripts/check_agent_instructions.py .
