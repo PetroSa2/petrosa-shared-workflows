@@ -85,14 +85,22 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           cache: 'pip'
+        id: setup-python
 
       - name: Cache virtual environment
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements*.txt') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
-            ${{ runner.os }}-venv-
+            ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-
+
+      - name: Validate virtual environment
+        shell: bash
+        run: |
+          if ! .venv/bin/python -c "import sys"; then
+            rm -rf .venv
+          fi
 
       - name: Install dependencies
         shell: bash
@@ -156,14 +164,22 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           cache: 'pip'
+        id: setup-python
 
       - name: Cache virtual environment
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements*.txt') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
-            ${{ runner.os }}-venv-
+            ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-
+
+      - name: Validate virtual environment
+        shell: bash
+        run: |
+          if ! .venv/bin/python -c "import sys"; then
+            rm -rf .venv
+          fi
 
       - name: Install dependencies
         shell: bash
