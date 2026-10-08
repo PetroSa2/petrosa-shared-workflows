@@ -39,6 +39,11 @@ on:
         type: string
         required: false
         default: ''
+      pytest-parallel:
+        description: 'Run pytest with pytest-xdist (-n auto). Off by default: turn it on per repo only after its suite passes in parallel (no shared state, ports or database names).'
+        type: boolean
+        required: false
+        default: false
     secrets:
       dockerhub-username:
         required: false
@@ -231,7 +236,12 @@ jobs:
         timeout-minutes: 25
         run: |
           source .venv/bin/activate
-          pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-threshold }} ${{ inputs.pytest-extra-args }}
+          PARALLEL=""
+          if [ "${{ inputs.pytest-parallel }}" = "true" ]; then
+            python -c "import xdist" 2>/dev/null || pip install pytest-xdist
+            PARALLEL="-n auto"
+          fi
+          pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-threshold }} $PARALLEL ${{ inputs.pytest-extra-args }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
