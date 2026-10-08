@@ -87,22 +87,28 @@ jobs:
           cache: 'pip'
         id: setup-python
 
+      # The lint venv holds only ruff and mypy. It has its own key: Test restoring this near-empty venv is
+      # what made every Test run reinstall every dependency and never save its own (shared-workflows#28).
       - name: Cache virtual environment
+        id: venv-cache
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-${{ hashFiles('**/requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-
+          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-lint-venv-ruff0.9.9-mypy1.15.0
 
       - name: Validate virtual environment
+        id: venv-check
         shell: bash
         run: |
-          if ! .venv/bin/python -c "import sys"; then
+          if .venv/bin/python -c "import sys" 2>/dev/null; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
             rm -rf .venv
+            echo "valid=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
+        if: steps.venv-cache.outputs.cache-hit != 'true' || steps.venv-check.outputs.valid != 'true'
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -166,22 +172,30 @@ jobs:
           cache: 'pip'
         id: setup-python
 
+      # The test venv has its own key (never restored by Lint) and covers every file that decides the installed
+      # set. On an exact hit the venv is complete and the install steps are skipped (shared-workflows#28).
       - name: Cache virtual environment
+        id: venv-cache
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-${{ hashFiles('**/requirements*.txt') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-test-venv-${{ hashFiles('**/requirements*.txt', 'pyproject.toml', 'setup.py', 'setup.cfg') }}
           restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-venv-
+            ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-test-venv-
 
       - name: Validate virtual environment
+        id: venv-check
         shell: bash
         run: |
-          if ! .venv/bin/python -c "import sys"; then
+          if .venv/bin/python -c "import sys" 2>/dev/null; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
             rm -rf .venv
+            echo "valid=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
+        if: steps.venv-cache.outputs.cache-hit != 'true' || steps.venv-check.outputs.valid != 'true'
         shell: bash
         run: |
           python -m pip install --upgrade pip
@@ -191,6 +205,12 @@ jobs:
           pip install -r requirements-dev.txt || true
           pip install -e . || true
 
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-${{ runner.arch }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
       - name: Install pre-commit
         shell: bash
         timeout-minutes: 15
@@ -198,7 +218,8 @@ jobs:
           BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
           source .venv/bin/activate
-          pip install pre-commit
+          # pre-commit lives in the cached venv: install it only when it is not there yet
+          command -v pre-commit >/dev/null || pip install pre-commit
           pre-commit install || true
 
           # Filter origin/ prefix if exists in BASE_REF
