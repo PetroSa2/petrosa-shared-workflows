@@ -23,7 +23,7 @@ permissions:
 jobs:
   instructions:
     name: Agent instructions
-    runs-on: ubuntu-latest
+    runs-on: petrosa-org-runners
     timeout-minutes: 10
     steps:
       - name: Checkout the repository

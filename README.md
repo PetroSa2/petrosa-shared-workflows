@@ -2,6 +2,8 @@
 
 Reusable GitHub Actions workflows shared across Petrosa service repositories.
 
+All reusable workflow jobs run on the `petrosa-org-runners` ARC scale set.
+
 ## Available Workflows
 
 ### CI Pipeline (`ci-pipeline.yml`)
