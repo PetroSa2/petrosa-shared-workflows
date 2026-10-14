@@ -317,10 +317,10 @@ jobs:
   # =============================================================================
   build-and-push:
     name: Build & Push
-    runs-on: ubuntu-latest
+    runs-on: petrosa-org-runners
     needs: security-scan
-    # 40m: runs on ubuntu-latest (unaffected by ARC saturation) but a stuck
-    # buildx/push should still self-terminate rather than idle for hours (#1064).
+    # 40m: a stuck buildx/push should self-terminate rather than idle for hours
+    # and pin a scarce ARC slot (#1064).
     timeout-minutes: 40
     if: ${{ inputs.skip-docker-build != true && needs.security-scan.result == 'success' }}
 

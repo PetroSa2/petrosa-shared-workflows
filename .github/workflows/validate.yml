@@ -19,14 +19,18 @@ permissions:
 jobs:
   validate:
     name: Lint reusable workflows
-    runs-on: ubuntu-latest
-    # Defensive timeout (#1064): this is a self-check on ubuntu-latest, not
-    # part of the reusable ARC-affected pipeline, but every job in this repo
-    # gets an explicit bound per the same AC.
+    runs-on: petrosa-org-runners
+    # Defensive timeout (#1064): every job in this repo gets an explicit bound
+    # so a hung self-check cannot pin a scarce ARC slot.
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: yamllint
         run: |
@@ -47,7 +51,7 @@ jobs:
 
   test:
     name: Test the check scripts
-    runs-on: ubuntu-latest
+    runs-on: petrosa-org-runners
     timeout-minutes: 15
     steps:
       - name: Checkout
