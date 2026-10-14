@@ -96,7 +96,7 @@ jobs:
       # what made every Test run reinstall every dependency and never save its own (shared-workflows#28).
       - name: Cache virtual environment
         id: venv-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .venv
           key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-lint-venv-ruff0.9.9-mypy1.15.0
@@ -181,7 +181,7 @@ jobs:
       # set. On an exact hit the venv is complete and the install steps are skipped (shared-workflows#28).
       - name: Cache virtual environment
         id: venv-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .venv
           key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-test-venv-${{ hashFiles('**/requirements*.txt', 'pyproject.toml', 'setup.py', 'setup.cfg') }}
@@ -211,7 +211,7 @@ jobs:
           pip install -e . || true
 
       - name: Cache pre-commit hook environments
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-${{ runner.arch }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
